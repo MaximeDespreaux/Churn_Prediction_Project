@@ -34,15 +34,13 @@ We will remove features with little predictive power (high p-value or many degre
 
 ## Features kept (FOR NOW):
 - **userId**: Useful to know who we are checking at time ts
-- **status**: Significance TBD ? Error 404 could lead to frustration
 - **level**: Very important metric for commitment. Transform into binary flag 0:free, 1:paid
-- **ts**: DateTime of action
 - **itemInSession**: Action number in session (bigger => more involved)
-- **time**: Time spent on action
 - **not_churn_score**:  Negative value, smaller value implies lower churn risk
 - **churn_risk_score**: Positive value, bigger value implies higher churn risk
 - **registration**: When account was created
-- **timeInSession**: How long session lasted
+- **timeInSession**: How long session lasted (replaces **ts** and **time** features)
+- **status**: Has 2 degrees of freedom and $\text{p-value} \approx 2.31\times 10^{-86}$
 
 ## Target Variable:
 - **churn_flag**: 0 if not yet churned and 1 if user churned
