@@ -1,0 +1,40 @@
+======================================================================
+CHURN PREDICTION MODEL - FINAL RESULTS
+======================================================================
+
+Validation F1-Score: 0.8045
+Optimal Threshold: 0.65
+
+BEST XGBOOST PARAMETERS:
+  colsample_bytree: 0.8
+  learning_rate: 0.05
+  max_depth: 7
+  n_estimators: 300
+  scale_pos_weight: 3.8817051509769094
+  subsample: 0.8
+
+BEST LIGHTGBM PARAMETERS:
+  colsample_bytree: 0.8
+  learning_rate: 0.01
+  max_depth: 7
+  n_estimators: 200
+  num_leaves: 63
+  subsample: 0.8
+
+ENSEMBLE WEIGHTS:
+  XGBoost: 0.4
+  LightGBM: 0.6
+
+TOP 10 FEATURES:
+  timeInSession: 0.2634
+  not_churn_score: 0.1782
+  churn_risk_score: 0.1272
+  itemInSession: 0.1175
+  level: 0.1130
+  timeSinceRegistered: 0.1108
+  status: 0.0900
+
+TEST PREDICTIONS:
+  Total users: 2,773
+  Predicted churns: 144
+  Predicted churn rate: 5.19%
