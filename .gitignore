@@ -1,3 +1,4 @@
 example_submission.csv
-*.parquet
+test.parquet
+train.parquet
 __pycache__
