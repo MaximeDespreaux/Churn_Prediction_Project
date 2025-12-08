@@ -1,4 +1,4 @@
-# Churn_Prediction_Project
+# Churn Prediction Project
 
 # Features Overview
 
