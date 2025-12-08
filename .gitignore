@@ -1,6 +1,6 @@
-example_submission.csv
-test.parquet
-train.parquet
+Submission/example_submission.csv
+Data/test.parquet
+Data/train.parquet
 __pycache__
 catboost_info/
 .DS_Store
