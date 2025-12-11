@@ -4,6 +4,21 @@ A machine learning project for predicting user churn in a music streaming servic
 
 ---
 
+**[Jump to Section](#table-of-contents)**
+- [Basic EDA](#basic-eda)
+- [Data Preprocessing](#data-preprocessing)
+- [Feature Engineering](#feature-engineering)
+- [Model Selection](#model-selection)
+- [Hyperparameter Tuning](#hyperparameter-tuning)
+- [Final Model Training and Submissions](#final-model-training-and-submissions)
+- [Feature Importance and Correlation](#feature-importance-and-correlation-to-target)
+- [Multicollinearity Analysis](#multicollinearity-analysis)
+- [Project Structure](#project-structure)
+- [Results Summary](#results-summary)
+- [Key Takeaways](#key-takeaways)
+  
+---
+
 ## Basic EDA
 
 ### Dataset Overview
