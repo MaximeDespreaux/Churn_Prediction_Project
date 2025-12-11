@@ -209,32 +209,27 @@ Bayesian optimization with TPE sampler across 50-300 trials per model.
 
 ---
 
-## Feature Importance
+## Feature Importance and Correlation to Target
 
-### Top 20 Features (Ensemble-Weighted)
+### Top 14 Features (Ensemble-Weighted)
 ```
 Feature                           Importance
-─────────────────────────────────────────────
-churn_risk_score                     0.0847
-not_churn_score                      0.0673
-page_nextsong_ratio                  0.0521
-session_churn_risk_last              0.0489
-last3_avg_risk                       0.0412
-session_retain_score_last            0.0387
-timeSinceRegistered                  0.0341
-page_downgrade                       0.0298
-session_length_mean                  0.0276
-risk_per_session                     0.0254
-session_duration_mean                0.0231
-page_thumbs_up_ratio                 0.0219
-engagement_decline                   0.0207
-sessionId_count                      0.0198
-page_settings                        0.0187
-session_churn_risk_mean              0.0174
-last3_avg_length                     0.0162
-page_upgrade                         0.0151
-avg_session_gap_hours                0.0143
-session_instability                  0.0138
+───────────────────────────────────────────────────────────────────────────────
+timeSinceRegistered               482.289696
+avg_session_gap_hours             446.594877
+page_thumbs_up_ratio               389.241942
+page_home_ratio                    353.124523
+page_thumbs_down_ratio             348.178566
+page_roll_advert_ratio             320.990437
+page_nextsong_ratio                317.321791
+sessionId_count                    309.283015
+page_add_to_playlist_ratio         296.059776
+std_session_gap_hours              261.242065
+page_settings_ratio                236.620717
+session_instability                231.697612
+session_duration_min               229.061727
+page_roll_advert                   195.268107
+
 ```
 
 ### Key Insights
@@ -259,23 +254,41 @@ session_instability                  0.0138
 
 ### Correlation Matrix (Key Features vs Target)
 
-| Feature | Correlation with Churn |
-|---------|------------------------|
-| `churn_risk_score` | **+0.42** |
-| `page_downgrade` | **+0.38** |
-| `risk_per_session` | **+0.35** |
-| `session_churn_risk_last` | **+0.33** |
-| `not_churn_score` | **-0.38** |
-| `page_nextsong_ratio` | **-0.34** |
-| `session_length_mean` | **-0.31** |
-| `page_thumbs_up_ratio` | **-0.29** |
+Feature                           Correlation
+───────────────────────────────────────────────────────────────────────────────
+page_roll_advert                  0.162531
+sessionId_count                   0.104597
+page_thumbs_down_ratio            0.092291
+session_instability               0.037382
+page_roll_advert_ratio            0.028851
+page_nextsong_ratio               0.026217
+page_add_to_playlist_ratio        0.012024
+page_settings_ratio              -0.006888
+session_duration_min             -0.016096
+page_home_ratio                  -0.033496
+timeSinceRegistered              -0.064857
+page_thumbs_up_ratio             -0.070442
+std_session_gap_hours            -0.225187
+avg_session_gap_hours            -0.228363
 
-### Multicollinearity Check
-- `session_churn_risk_last` ⟷ `churn_risk_score`: r = 0.87 (expected - last session ⊂ cumulative)
-- `session_length_mean` ⟷ `session_duration_mean`: r = 0.72 (correlated but measure different aspects)
-- `page_nextsong` ⟷ `page_nextsong_ratio`: r = 0.65 (normalized version provides better signal)
 
-**Conclusion**: Moderate correlations exist but are interpretable. Ensemble models (tree-based) handle multicollinearity naturally.
+
+## Multicollinearity Analysis
+
+### Strongest Correlations
+
+| Feature A |Feature B | Correlation |
+|-----------|----------|-------------|
+| `avg_session_gap_hours` | `std_session_gap_hours` | 0.76 |
+| `page_nextsong_ratio` | `page_home_ratio` | -0.76 |
+| `sessionId_count` | `page_roll_advert` | 0.54 |
+| `session_instability` | `session_duration_min` | -0.43 |
+
+### Key Insights
+- **`avg_session_gap_hours`** and **`std_session_gap_hours`** are highly correlated (0.76).
+- **`page_nextsong_ratio`** and **`page_home_ratio`** are strongly inversely related (-0.76).
+- **`sessionId_count`** and **`page_roll_advert`** are moderately correlated (0.54). This is logical.
+
 
 ---
 
