@@ -37,16 +37,18 @@ The preprocessing pipeline prepares raw event logs for feature engineering:
    - `timeSinceRegistered`: Account age in seconds (user lifecycle stage)
 
 ### Cumulative Risk Scoring
-Page visits are weighted and accumulated to create behavioral risk signals:
+Page visits are weighted and accumulated to create behavioral risk signals.
+The coefficients were computed using logistic regression to test the impact of page visits on churn rate:
 ```python
 CHURN_PAGES = {
-    'Cancel': 7.0, 'Cancellation Confirmation': 7.0,
-    'Downgrade': 0.16, 'Submit Upgrade': 0.14, ...
+    'Cancel': 7, 'Cancellation Confirmation': 7, 'Downgrade': 0.16,
+    'Submit Upgrade': 0.14, 'Upgrade': 0.03, 'Settings': 0.02, 'Submit Downgrade': 0.01
 }
 
 RETAIN_PAGES = {
-    'NextSong': -1.925, 'Thumbs Up': -0.716,
-    'Add to Playlist': -0.383, ...
+    'Save Settings': -0.0007, 'Thumbs Down': -0.016, 'About': -0.054, 'Help': -0.058,
+    'Add Friend': -0.158, 'Add to Playlist': -0.383, 'Roll Advert': -0.422,
+    'Thumbs Up': -0.716, 'Home': -1.423, 'NextSong': -1.925
 }
 ```
 
