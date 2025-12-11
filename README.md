@@ -66,7 +66,7 @@ These scores capture evolving user sentiment throughout their activity history.
 - **Buffer Days**: 1 day (exclude last day before churn to prevent data leakage)
 - **Non-churner filtering**: Remove last 10 days of activity for retained users to balance temporal coverage
 
-This creates a realistic prediction scenario: "Will this user churn in the next 10 days?"
+This creates a realistic prediction scenario of whether or not user churns in the next 10 days.
 
 ---
 
