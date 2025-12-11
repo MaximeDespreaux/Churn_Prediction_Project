@@ -253,7 +253,7 @@ page_roll_advert                   195.268107
 ## Feature Correlation Analysis
 
 ### Correlation Matrix (Key Features vs Target)
-
+```
 Feature                           Correlation
 ───────────────────────────────────────────────────────────────────────────────
 page_roll_advert                  0.162531
@@ -270,7 +270,7 @@ timeSinceRegistered              -0.064857
 page_thumbs_up_ratio             -0.070442
 std_session_gap_hours            -0.225187
 avg_session_gap_hours            -0.228363
-
+```
 
 
 ## Multicollinearity Analysis
