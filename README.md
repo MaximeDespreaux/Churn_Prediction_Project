@@ -4,6 +4,21 @@ A machine learning project for predicting user churn in a music streaming servic
 
 ---
 
+**[Jump to Section](#table-of-contents)**
+- [Basic EDA](#basic-eda)
+- [Data Preprocessing](#data-preprocessing)
+- [Feature Engineering](#feature-engineering)
+- [Model Selection](#model-selection)
+- [Hyperparameter Tuning](#hyperparameter-tuning)
+- [Final Model Training and Submissions](#final-model-training-and-submissions)
+- [Feature Importance and Correlation](#feature-importance-and-correlation-to-target)
+- [Multicollinearity Analysis](#multicollinearity-analysis)
+- [Project Structure](#project-structure)
+- [Results Summary](#results-summary)
+- [Key Takeaways](#key-takeaways)
+  
+---
+
 ## Basic EDA
 
 ### Dataset Overview
@@ -180,11 +195,11 @@ Engineered signals combining multiple base features:
 Bayesian optimization with TPE sampler across 50-300 trials per model.
 
 **Best Parameters:**
-- XGBoost: `max_depth=9, lr=0.006325100895389698, n_estimators=900, scale_pos_weight=4.071312898239144, subsample: 0.779902648354595, colsample_bytree: 0.7988086494810053, min_child_weight: 1`
-- LightGBM: `max_depth=9, lr=0.017365761888529056, n_estimators=1000, num_leaves=57,  'scale_pos_weight': 3.8821651139944318`
-- CatBoost: `depth=8, lr=0.024913012853398045, iterations=1200, 'scale_pos_weight': 4.043605337826235`
-- LogisticRegression: `penalty: 'l2', C: 0.0775077624735153, max_iter: 588`
-- Ensemble: `xgb: 0.25000000000000006, lgb: 0.15000000000000002, cat: 0.5, logreg: 0.1`
+- XGBoost: `max_depth=9, lr=0.00632, n_estimators=900, scale_pos_weight=4.071, subsample: 0.7799, colsample_bytree: 0.7988, min_child_weight: 1`
+- LightGBM: `max_depth=9, lr=0.01737, n_estimators=1000, num_leaves=57,  'scale_pos_weight': 3.882`
+- CatBoost: `depth=8, lr=0.0249, iterations=1200, 'scale_pos_weight': 4.0436`
+- LogisticRegression: `penalty: 'l2', C: 0.0775, max_iter: 588`
+- Ensemble: `xgb: 0.25, lgb: 0.15, cat: 0.5, logreg: 0.1`
 
 **Cross-Validation**: 5-fold stratified CV to ensure stable performance estimates
 
@@ -253,7 +268,7 @@ page_roll_advert                   195.268107
 ## Feature Correlation Analysis
 
 ### Correlation Matrix (Key Features vs Target)
-
+```
 Feature                           Correlation
 ───────────────────────────────────────────────────────────────────────────────
 page_roll_advert                  0.162531
@@ -270,7 +285,7 @@ timeSinceRegistered              -0.064857
 page_thumbs_up_ratio             -0.070442
 std_session_gap_hours            -0.225187
 avg_session_gap_hours            -0.228363
-
+```
 
 
 ## Multicollinearity Analysis
