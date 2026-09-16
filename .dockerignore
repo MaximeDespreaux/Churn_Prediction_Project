@@ -1,0 +1,36 @@
+# Keep the build context small: only what the Dockerfile copies is needed.
+# (pyproject.toml, uv.lock and README.md must stay in the context.)
+.git
+.github
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+build
+dist
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+.ipynb_checkpoints
+.vscode
+.idea
+.DS_Store
+.env
+
+# Raw data (~740 MB) is never baked into an image; mount ./data instead
+data/raw
+
+# Fitted models and generated predictions come from mounted volumes
+models/*.joblib
+reports/test_predictions.csv
+catboost_info
+
+notebooks
+compose.yaml
+Dockerfile
+.dockerignore
+.pre-commit-config.yaml
+Makefile

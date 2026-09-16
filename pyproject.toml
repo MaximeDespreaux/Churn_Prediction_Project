@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "churn-prediction"
+version = "1.0.0"
+description = "10-day churn prediction for a music-streaming service, with a Streamlit app."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Maxime Despreaux" }]
+# Ranges here; the exact, reproducible versions live in uv.lock.
+# Core = what the Streamlit app and the data code need.
+dependencies = [
+    "numpy>=2.3.3,<3",
+    "pandas>=2.3.2,<3",
+    "pyarrow>=22.0.0",
+    "scikit-learn>=1.7.2,<1.8",
+    "joblib>=1.5.2",
+    "streamlit>=1.64.0,<2",
+    "altair>=6.3.0,<7",
+]
+
+[project.scripts]
+churn = "churn_prediction.__main__:main"
+
+[project.optional-dependencies]
+# Gradient-boosting models (training / scoring). The Linux `xgboost` wheel pulls
+# ~200 MB of CUDA libraries; `xgboost-cpu` is the same library (same
+# `import xgboost`) without them.
+ml = [
+    "xgboost>=3.0.5,<4; sys_platform != 'linux'",
+    "xgboost-cpu>=3.0.5,<4; sys_platform == 'linux'",
+    "lightgbm>=4.6,<5",
+    "catboost>=1.2.10,<2",
+]
+# Hyper-parameter search
+tune = ["optuna>=4.5,<5"]
+
+[dependency-groups]
+# Installed by default by `uv sync` / `uv run`; skip with `--no-dev`.
+dev = [
+    "pytest>=9.0.1",
+    "pytest-cov>=7.1",
+    "black==25.12.0",
+    "ruff==0.16.7",
+    "pre-commit>=4.6.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["model: fits small ML models on synthetic data (deselect with -m 'not model')"]
+
+[tool.coverage.run]
+# the package and the Streamlit pages (executed by tests/test_app.py)
+source = ["churn_prediction", "app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_also = ['if __name__ == "__main__":']
+fail_under = 100
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+extend-exclude = "notebooks"
+force-exclude = "notebooks"  # also when pre-commit passes file names
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = ["notebooks"]
+force-exclude = true  # also when pre-commit passes file names
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "NPY", "PD002"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["churn_prediction"]
+known-local-folder = ["common", "conftest", "notebook_reference"]

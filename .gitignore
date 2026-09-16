@@ -1,6 +1,33 @@
-Submission/example_submission.csv
-Data/test.parquet
-Data/train.parquet
-__pycache__
+# --- Data -------------------------------------------------------------------
+# Raw event logs are large (~740 MB) and are not versioned; see README.
+data/raw/*
+!data/raw/.gitkeep
+
+# --- Model artifacts --------------------------------------------------------
+# Fitted models are rebuilt from models/params/*.json (`churn train`)
+models/*.joblib
 catboost_info/
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# --- Tooling ----------------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# --- OS / editors -----------------------------------------------------------
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
