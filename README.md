@@ -3,6 +3,7 @@
 [![CI/CD](https://github.com/MaximeDespreaux/Churn_Prediction_Project/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/MaximeDespreaux/Churn_Prediction_Project/actions/workflows/ci-cd.yml)
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![uv](https://img.shields.io/badge/deps-uv-6340ac)
 ![Docker](https://img.shields.io/badge/docker-app%20%7C%20pipeline%20%7C%20test-2496ed)
 
@@ -24,7 +25,7 @@ It comes with a **Streamlit app** to explore the data, the models and their pred
 - [Pre-trained Models](#pre-trained-models)
 - [Results](#results)
 - [Project Structure](#project-structure)
-- [Contributing](#contributing)
+- [Contributing](#contributing) · [License](#license)
 
 ---
 
@@ -455,7 +456,7 @@ avg_session_gap_hours             -0.228363
 ├── .streamlit/config.toml
 ├── Dockerfile                    images: app (default), pipeline, test
 ├── compose.yaml                  services: app, pipeline, tests
-├── Makefile
+├── LICENSE, Makefile
 ├── pyproject.toml, uv.lock
 └── .dockerignore, .gitattributes, .gitignore, .pre-commit-config.yaml
 ```
@@ -496,3 +497,7 @@ The [CI/CD pipeline](.github/workflows/ci-cd.yml) runs on pull requests, pushes 
 
 [Dependabot](.github/dependabot.yml) opens weekly pull requests for the uv dependencies, GitHub
 Actions and the Docker base image.
+
+## License
+
+Released under the [MIT License](LICENSE).

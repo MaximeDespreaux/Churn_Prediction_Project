@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,8 @@ description = "10-day churn prediction for a music-streaming service, with a Str
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Maxime Despreaux" }]
+license = "MIT"
+license-files = ["LICENSE"]
 # Ranges here; the exact, reproducible versions live in uv.lock.
 # Core = what the Streamlit app and the data code need.
 dependencies = [
