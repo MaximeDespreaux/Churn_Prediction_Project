@@ -1,0 +1,369 @@
+name: CI/CD
+
+# lint ---+
+#         +--> build --> publish --> release --> all checks
+# test ---+
+#
+# build    app, pipeline and test images; app health check, CLI check, tests in the test image
+# publish  app and pipeline images: pushed to GHCR (+ Docker Hub) on main and v* tags, then pulled
+#          back and checked; on pull requests the same images are built and checked (dry run)
+# release  version and tag checks; GitHub Release on v* tags, release-notes preview otherwise
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # `uv sync` / `uv run` (called by make) fail instead of rewriting an outdated uv.lock
+  UV_LOCKED: "1"
+  # Images are named <prefix>-<Dockerfile target>: churn-prediction-app, -pipeline, -test
+  IMAGE_PREFIX: churn-prediction
+
+jobs:
+  lint:
+    name: Lint & checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # setup-uv only publishes full version tags from v8 on (no floating `v10`)
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.15"
+          enable-cache: true
+          python-version: "3.12"
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      # all pre-commit hooks (ruff, black, uv.lock sync, file hygiene) on every file
+      - run: make check
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.15"
+          enable-cache: true
+          # Exported as UV_PYTHON for every later step, so both `uv sync` and
+          # `uv run` (called by make) use this interpreter instead of uv's default one.
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: make install
+      - name: Run tests
+        run: make test
+      - name: Upload coverage report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  build:
+    name: Docker build & smoke tests
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # One Dockerfile, three targets; each target has its own cache scope
+      # (shared with the publish job) so they don't overwrite each other.
+      - name: Build app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: app
+          load: true
+          tags: ${{ env.IMAGE_PREFIX }}-app:ci
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+      - name: Build pipeline image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: pipeline
+          load: true
+          tags: ${{ env.IMAGE_PREFIX }}-pipeline:ci
+          cache-from: type=gha,scope=pipeline
+          cache-to: type=gha,mode=max,scope=pipeline
+      - name: Build test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: test
+          load: true
+          tags: ${{ env.IMAGE_PREFIX }}-test:ci
+          cache-from: type=gha,scope=test
+          cache-to: type=gha,mode=max,scope=test
+      - name: Run app container
+        run: make docker-run IMAGE="${IMAGE_PREFIX}-app" TAG=ci
+      - name: Check app health
+        run: make docker-smoke
+      - name: Check the app page is served
+        run: |
+          page="$(curl --silent --show-error --fail http://localhost:8501/)"
+          grep --quiet --ignore-case "streamlit" <<< "$page"
+          echo "Streamlit page served"
+      # `<command> --help` also imports each command's module (and its ML libraries)
+      - name: Check the pipeline CLI
+        run: |
+          docker run --rm "${IMAGE_PREFIX}-pipeline:ci" --help
+          for command in build-features evaluate train predict tune; do
+            docker run --rm "${IMAGE_PREFIX}-pipeline:ci" "$command" --help > /dev/null
+            echo "churn $command --help: OK"
+          done
+      - name: Run the test suite in the test image
+        run: docker run --rm "${IMAGE_PREFIX}-test:ci"
+      - name: Stop app container
+        if: always()
+        run: make docker-stop
+
+  # Runs on every event. Pull requests and manual runs are dry runs: the exact
+  # images that would be published are built and checked, but not pushed.
+  publish:
+    name: Publish ${{ matrix.image }} image
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [app, pipeline]
+    env:
+      PUSH: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+      # Secrets are not available to pull requests from forks
+      TRUSTED: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      # GHCR image names must be lowercase. Docker Hub is added only when the
+      # DOCKERHUB_USERNAME variable (and the DOCKERHUB_TOKEN secret) are set.
+      - name: Image names
+        id: images
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          IMAGE_NAME: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          {
+            echo "name=${IMAGE_NAME}"
+            echo "ghcr=ghcr.io/${owner}/${IMAGE_NAME}"
+            echo "list<<EOF"
+            echo "ghcr.io/${owner}/${IMAGE_NAME}"
+            if [ -n "$DOCKERHUB_USERNAME" ]; then
+              echo "${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Docker Hub
+        if: vars.DOCKERHUB_USERNAME != '' && env.TRUSTED == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.images.outputs.list }}
+          # `latest` follows the default branch only, not release tags
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=pr
+          # keep the per-image title instead of the repository name
+          labels: org.opencontainers.image.title=${{ steps.images.outputs.name }}
+      # Dry runs load the image locally (attestations can't be loaded, only pushed)
+      - name: Build and ${{ env.PUSH == 'true' && 'push' || 'load (dry run)' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.image }}
+          push: ${{ env.PUSH == 'true' }}
+          load: ${{ env.PUSH != 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          provenance: ${{ env.PUSH == 'true' && 'mode=max' || 'false' }}
+          sbom: ${{ env.PUSH == 'true' }}
+      # The image under test: pulled back from GHCR when published, local otherwise
+      - name: Select the image to check
+        id: ref
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          GHCR: ${{ steps.images.outputs.ghcr }}
+        run: |
+          ref="$(grep -m1 "^${GHCR}:" <<< "$TAGS")"
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          if [ "$PUSH" = "true" ]; then
+            docker image rm --force "$ref" || true
+            docker pull "$ref"
+          fi
+          docker image inspect --format '{{.Id}} {{.Size}} bytes' "$ref"
+      - name: Check the app container
+        if: matrix.image == 'app'
+        env:
+          REF: ${{ steps.ref.outputs.ref }}
+        run: |
+          docker run --detach --name churn-app --publish 8501:8501 "$REF"
+          make docker-smoke
+          curl --silent --show-error --fail http://localhost:8501/ | grep --quiet --ignore-case streamlit
+      - name: Check the pipeline CLI
+        if: matrix.image == 'pipeline'
+        env:
+          REF: ${{ steps.ref.outputs.ref }}
+        run: |
+          docker run --rm "$REF" --help
+          for command in build-features evaluate train predict tune; do
+            docker run --rm "$REF" "$command" --help > /dev/null
+            echo "churn $command --help: OK"
+          done
+          docker run --rm --entrypoint python "$REF" -c \
+            "import xgboost, lightgbm, catboost, optuna; print('ML libraries OK')"
+      - name: Stop the app container
+        if: always() && matrix.image == 'app'
+        run: make docker-stop
+      - name: Summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            if [ "$PUSH" = "true" ]; then
+              echo "### ${{ matrix.image }} image published and checked"
+            else
+              echo "### ${{ matrix.image }} image: dry run (built and checked, not pushed)"
+            fi
+            echo '```'
+            echo "$TAGS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Runs on every event. Only `v*` tags create a release; otherwise the version
+  # is validated and the release notes are previewed.
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: publish
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      IS_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+      TRUSTED: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read the project version
+        id: version
+        run: |
+          version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+          echo "pyproject.toml version: ${version}"
+      - name: Check the tag matches the version
+        if: env.IS_TAG == 'true'
+        env:
+          EXPECTED: ${{ steps.version.outputs.tag }}
+        run: |
+          if [ "$GITHUB_REF_NAME" != "$EXPECTED" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pyproject.toml (expected $EXPECTED)"
+            exit 1
+          fi
+      - name: Check the next tag is free
+        if: env.IS_TAG != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh api "repos/${GH_REPO}/git/ref/tags/${TAG}" > /dev/null 2>&1; then
+            echo "::warning::${TAG} already exists: bump the version in pyproject.toml before the next release"
+          else
+            echo "${TAG} is free for the next release"
+          fi
+      - name: Release notes
+        id: notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          registry="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          {
+            echo "notes<<EOF"
+            echo "Docker images:"
+            for target in app pipeline; do
+              image="${registry}/${IMAGE_PREFIX}-${target}:${VERSION}"
+              echo "- ${target}: \`docker pull ${image}\`"
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Preview the generated release notes
+        if: env.IS_TAG != 'true' && env.TRUSTED == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          NOTES: ${{ steps.notes.outputs.notes }}
+        run: |
+          generated="$(gh api "repos/${GH_REPO}/releases/generate-notes" \
+            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" --jq .body)"
+          {
+            echo "### Release preview: ${TAG} (dry run)"
+            echo "$NOTES"
+            echo
+            echo "$generated"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Create the release
+        if: env.IS_TAG == 'true'
+        env:
+          NOTES: ${{ steps.notes.outputs.notes }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag \
+            --notes "$NOTES"
+          gh release view "$GITHUB_REF_NAME"
+
+  # One status for branch protection: fails if any stage failed, was cancelled or skipped
+  all-checks:
+    name: All checks
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, publish, release]
+    if: always()
+    steps:
+      - name: A stage did not succeed
+        if: >-
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled') ||
+          contains(needs.*.result, 'skipped')
+        run: |
+          echo "::error::Stage results: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - name: Every stage succeeded
+        run: echo "lint, test, build, publish and release all succeeded"

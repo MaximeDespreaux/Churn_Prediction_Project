@@ -1,0 +1,50 @@
+# Churn prediction: all services are built from the Dockerfile.
+#
+#   docker compose up --build --detach             dashboard on http://localhost:8501
+#   docker compose watch                           same, reloading on code changes
+#   docker compose run --rm pipeline <command>     build-features | evaluate | train | predict | tune
+#   docker compose run --rm tests                  test suite (pytest)
+#   docker compose down --volumes
+#
+# `pipeline` and `tests` sit behind profiles, so `up` only starts the dashboard;
+# `docker compose run <service>` starts them on demand.
+name: churn-prediction
+
+services:
+  app:
+    build:
+      context: .
+      target: app
+    image: ${DOCKER_USERNAME:-local}/churn-prediction-app:${TAG:-latest}
+    container_name: churn-app
+    ports:
+      - "${PORT:-8501}:8501"
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+        - action: rebuild
+          path: ./src
+        - action: rebuild
+          path: ./uv.lock
+
+  pipeline:
+    profiles: [pipeline]
+    build:
+      context: .
+      target: pipeline
+    image: ${DOCKER_USERNAME:-local}/churn-prediction-pipeline:${TAG:-latest}
+    # Raw logs go in ./data/raw; features, models and reports are written back to the host
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./reports:/app/reports
+
+  tests:
+    profiles: [test]
+    build:
+      context: .
+      target: test
+    image: ${DOCKER_USERNAME:-local}/churn-prediction-test:${TAG:-latest}
