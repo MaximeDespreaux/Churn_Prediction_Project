@@ -487,13 +487,22 @@ make docker-test
 | `test_analysis.py`, `test_viz.py` | App summaries and chart specifications |
 | `test_app.py` | Every Streamlit page, its filters and its fallbacks |
 
-The [CI/CD pipeline](.github/workflows/ci-cd.yml) runs on pull requests, pushes to `main` and `v*` tags:
+The [CI/CD pipeline](.github/workflows/ci-cd.yml) runs every stage on pull requests, pushes to
+`main` and `v*` tags:
 
 1. **Checks**: every pre-commit hook (`make check`)
 2. **Tests**: `make test` on Python 3.12 and 3.13
-3. **Build**: app, pipeline and test images; app health check, `churn --help` in the pipeline image, test suite in the test image
-4. **Publish** (`main` and `v*` tags): app and pipeline images to `ghcr.io/maximedespreaux/`, and to Docker Hub when the `DOCKERHUB_USERNAME` variable and `DOCKERHUB_TOKEN` secret are set
-5. **Release** (`v*` tags): GitHub Release with generated notes
+3. **Build**: app, pipeline and test images; app health check, `churn` CLI check, test suite in the test image
+4. **Publish**: the app and pipeline images, tagged for `ghcr.io/maximedespreaux/` (and Docker Hub when the `DOCKERHUB_USERNAME` variable and `DOCKERHUB_TOKEN` secret are set). On `main` and `v*` tags they are pushed, pulled back and checked; on pull requests the same images are built and checked without being pushed
+5. **Release**: the `v*` tag must match the version in `pyproject.toml`; a tag creates the GitHub Release, otherwise the release notes are previewed in the run summary
+6. **All checks**: a single status that fails if any stage did not succeed
+
+To release, merge into `main`, then tag the version from `pyproject.toml`:
+
+```bash
+git switch main && git pull
+git tag v1.0.0 && git push origin v1.0.0
+```
 
 [Dependabot](.github/dependabot.yml) opens weekly pull requests for the uv dependencies, GitHub
 Actions and the Docker base image.
