@@ -7,6 +7,13 @@
 ![uv](https://img.shields.io/badge/deps-uv-6340ac)
 ![Docker](https://img.shields.io/badge/docker-app%20%7C%20pipeline%20%7C%20test-2496ed)
 
+> **Authorship.** The underlying data-science project (EDA, feature engineering, model
+> selection and hyper-parameter tuning) was coursework carried out in a pair with
+> [@AnaisStorp](https://github.com/AnaisStorp), whose last commit (`d465919`) dates from
+> 3 December 2025. This assignment — the Streamlit app, the `churn_prediction` package, the
+> test suite, the Docker images and the CI/CD pipeline, from 16 September 2026 — is my own
+> individual work.
+
 This repository is the implementation of a **10-day churn prediction model for a music-streaming
 service**. From user activity logs, it predicts which users will cancel their subscription within
 the next 10 days, using temporal behavioral patterns and a weighted ensemble of XGBoost, LightGBM,
