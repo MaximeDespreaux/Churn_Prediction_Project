@@ -86,7 +86,7 @@ jobs:
       # One Dockerfile, three targets; each target has its own cache scope
       # (shared with the publish job) so they don't overwrite each other.
       - name: Build app image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: app
@@ -95,7 +95,7 @@ jobs:
           cache-from: type=gha,scope=app
           cache-to: type=gha,mode=max,scope=app
       - name: Build pipeline image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: pipeline
@@ -104,7 +104,7 @@ jobs:
           cache-from: type=gha,scope=pipeline
           cache-to: type=gha,mode=max,scope=pipeline
       - name: Build test image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: test
@@ -203,7 +203,7 @@ jobs:
           labels: org.opencontainers.image.title=${{ steps.images.outputs.name }}
       # Dry runs load the image locally (attestations can't be loaded, only pushed)
       - name: Build and ${{ env.PUSH == 'true' && 'push' || 'load (dry run)' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: ${{ matrix.image }}
