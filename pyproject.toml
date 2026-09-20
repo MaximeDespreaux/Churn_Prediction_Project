@@ -37,7 +37,7 @@ ml = [
     "catboost>=1.2.10,<2",
 ]
 # Hyper-parameter search
-tune = ["optuna>=4.5,<5"]
+tune = ["optuna>=5.0.0,<6"]
 
 [dependency-groups]
 # Installed by default by `uv sync` / `uv run`; skip with `--no-dev`.
