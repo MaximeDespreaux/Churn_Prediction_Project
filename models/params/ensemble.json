@@ -1,0 +1,8 @@
+{
+  "weights": {
+    "xgboost": 0.25,
+    "lightgbm": 0.1,
+    "catboost": 0.5,
+    "logreg": 0.15
+  }
+}

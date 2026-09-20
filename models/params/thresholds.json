@@ -1,0 +1,7 @@
+{
+  "ensemble": 0.44,
+  "xgboost": 0.5,
+  "lightgbm": 0.45,
+  "catboost": 0.4,
+  "logreg": 0.195
+}
